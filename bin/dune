@@ -1,0 +1,4 @@
+(executable
+ (name fetch)
+ (libraries exchangeRate cohttp-lwt-unix)
+ (preprocess (pps lwt_ppx)))
