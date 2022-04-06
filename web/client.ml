@@ -1,6 +1,9 @@
 open Js_of_ocaml
 module E = ExchangeRate.Make (Cohttp_lwt_xhr.Client)
 
+let append parent child =
+  ignore (parent##appendChild (child :> Dom.node Js.t))
+
 let () = Lwt.async (fun () ->
   match%lwt E.fetch "EUR" with
   | Ok t ->
@@ -10,7 +13,7 @@ let () = Lwt.async (fun () ->
       let opt = Dom_html.(createOption document) in
       opt##.textContent := Js.(some (string cur));
       opt##.value := Js.string (string_of_float rate);
-      ignore @@ c'##appendChild (opt :> Dom.node Js.t)
+      append c' opt
     );
     let i = Dom_html.(createInput ~_type:(Js.string "number") document) in
     i##.required := Js._true;
@@ -25,11 +28,11 @@ let () = Lwt.async (fun () ->
       o##.value := Js.string (string_of_float (i *. r));
       Js._false
     );
-    ignore @@ f##appendChild (i :> Dom.node Js.t);
-    ignore @@ f##appendChild (b :> Dom.node Js.t);
-    ignore @@ f##appendChild (o :> Dom.node Js.t);
-    ignore @@ f##appendChild (c' :> Dom.node Js.t);
-    ignore @@ Dom_html.document##.body##appendChild (f :> Dom.node Js.t);
+    append f i;
+    append f b;
+    append f o;
+    append f c';
+    append Dom_html.document##.body f;
     Lwt.return ()
   | Error e ->
     let msg =
@@ -43,6 +46,6 @@ let () = Lwt.async (fun () ->
     let d = Dom_html.(createDiv document) in
     d##.classList##add (Js.string "err");
     d##.textContent := Js.(some (string msg));
-    ignore @@ Dom_html.document##.body##appendChild (d :> Dom.node Js.t);
+    append Dom_html.document##.body d;
     Lwt.return ()
 )
