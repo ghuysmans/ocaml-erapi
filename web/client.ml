@@ -17,9 +17,6 @@ let data = [
   {iso_4217 = "RUB"; name = "российский рубль"; translation = "rouble"};
 ]
 
-let string_of_ascending asc =
-  if asc then "▲" else "▼"
-
 let () = Lwt.async (fun () ->
   match%lwt E.fetch "EUR" with
   | Ok t ->
@@ -49,61 +46,18 @@ let () = Lwt.async (fun () ->
     append f o;
     append f c';
     append Dom_html.document##.body f;
-    let tbl = Dom_html.(createTable document) in
-    let rows = ref (
-      data |> List.map (fun x ->
-        let r = Dom_html.(createTr document) in
-        [
-          x.iso_4217 ^ " " ^ Js.to_string (flag (String.sub x.iso_4217 0 2));
-          x.name;
-          x.translation;
-          string_of_float @@ List.assoc x.iso_4217 t.rates;
-        ] |> List.iter (fun x ->
-          let c = Dom_html.(createTd document) in
-          c##.textContent := Js.(some (string x));
-          append r c
-        );
-        x, r
-      )
-    ) in
-    let compare_map f (x, _) (y, _) = compare (f x) (f y) in
-    let columns = [
-      "ISO", compare_map (fun x -> x.iso_4217);
-      "Nom", compare_map (fun x -> x.name);
-      "Traduction", compare_map (fun x -> x.translation);
-      "1€", compare_map (fun x -> List.assoc x.iso_4217 t.rates);
-    ] in
-    let header = Dom_html.(createTr document) in
-    let spans = Array.init (List.length columns) (fun _ -> Dom_html.(createSpan document)) in
-    let sort = ref None in
-    let refresh () = !rows |> List.iter (fun (_, r) -> append tbl r) in
-    columns |> List.iteri (fun i (heading, cmp) ->
-      let th = Dom_html.(createTh document) in
-      th##.textContent := Js.(some (string heading));
-      th##.onclick := Dom.handler (fun _ ->
-        begin match !sort with
-        | Some (i', asc) when i = i' ->
-          rows := List.rev !rows;
-          sort := Some (i, not asc);
-          spans.(i)##.textContent := Js.(some (string (string_of_ascending (not asc))))
-        | _ ->
-          begin match !sort with
-          | Some (i', _) -> spans.(i')##.textContent := Js.null
-          | None -> ()
-          end;
-          rows := List.sort cmp !rows;
-          sort := Some (i, true);
-          spans.(i)##.textContent := Js.(some (string (string_of_ascending true)))
-        end;
-        refresh ();
-        Js._true
-      );
-      append th spans.(i);
-      append header th
-    );
-    append tbl header;
-    refresh ();
-    append Dom_html.document##.body tbl;
+    let show_iso td x =
+      td##.textContent := Js.(some (concat
+        (flag (String.sub x.iso_4217 0 2))
+        (string x.iso_4217)
+      ))
+    in
+    append Dom_html.document##.body @@ Table_jsoo.(make data [
+      fancy "ISO" (fun x -> x.iso_4217) show_iso;
+      std "Nom" (fun x -> x.name) String;
+      std "Traduction" (fun x -> x.translation) String;
+      std "1€" (fun x -> List.assoc x.iso_4217 t.rates) Float;
+    ]);
     Lwt.return ()
   | Error e ->
     let msg =

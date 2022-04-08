@@ -1,4 +1,4 @@
 (executable
  (name client) (modes js)
- (libraries exchangeRate cohttp-lwt-jsoo)
+ (libraries exchangeRate cohttp-lwt-jsoo table_jsoo)
  (preprocess (pps js_of_ocaml-ppx lwt_ppx)))
